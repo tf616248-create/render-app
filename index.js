@@ -43,16 +43,15 @@
 // app.listen(PORT, () => {
 //   console.log(`השרת רץ על פורט ${PORT}`);
 // });
-
-
 const express = require('express');
+const fetch = require('node-fetch'); // אם Node < 18
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', async (req, res) => {
   try {
     const apiKey = process.env.RENDER_API_KEY;
-    
     if (!apiKey) {
       return res.status(500).json({ error: 'API Key לא מוגדר' });
     }
@@ -70,27 +69,33 @@ app.get('/', async (req, res) => {
     }
 
     const data = await response.json();
-    
-    // בדוק אם data הוא מערך או אובייקט עם שדה services
-    const services = Array.isArray(data) ? data : (data.services || []);
-    console.log(JSON.stringify(data, null, 2));
 
-    // סנן והצג רק את השדות המבוקשים
-    const filteredServices = services.map(service => ({
-      id: service.id,
-      name: service.name,
-      type: service.type,
-      runtime: service.serviceDetails?.env || service.env || 'לא זמין',
-      region: service.region,
-      slug: service.slug || service.name,
-      serviceName: service.name,
-      createdAt: service.createdAt,
-      updatedAt: service.updatedAt,
-      serviceState: service.suspended === 'suspended' ? 'suspended' : 
-                    service.suspended === 'not_suspended' ? 'active' : 
-                    service.serviceState || 'active'
-    }));
-    
+    // עכשיו data הוא מערך של אובייקטים עם מפתח service
+    const filteredServices = data.map(item => {
+      const service = item.service;
+
+      return {
+        id: service.id,
+        name: service.name,
+        type: service.type,
+        runtime: service.serviceDetails?.env || service.env || 'לא זמין',
+        region: service.serviceDetails?.region || service.region || 'לא זמין',
+        slug: service.slug || service.name,
+        serviceName: service.name,
+        createdAt: service.createdAt,
+        updatedAt: service.updatedAt,
+        serviceState: service.suspended === 'suspended' ? 'suspended' :
+                      service.suspended === 'not_suspended' ? 'active' :
+                      service.serviceState || 'active',
+        url: service.serviceDetails?.url || 'לא זמין',
+        autoDeploy: service.autoDeploy || 'לא זמין',
+        branch: service.branch || 'לא זמין'
+      };
+    });
+
+    // הדפסת JSON מסודר לקונסול
+    console.log(JSON.stringify(filteredServices, null, 2));
+
     res.json({
       total: filteredServices.length,
       services: filteredServices
@@ -98,13 +103,10 @@ app.get('/', async (req, res) => {
 
   } catch (error) {
     console.error('שגיאה:', error);
-    res.status(500).json({ 
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(PORT, () => {
   console.log(`🚀 השרת רץ על פורט ${PORT}`);
 });
-
