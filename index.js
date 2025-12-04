@@ -73,7 +73,8 @@ app.get('/', async (req, res) => {
     
     // בדוק אם data הוא מערך או אובייקט עם שדה services
     const services = Array.isArray(data) ? data : (data.services || []);
-    
+    console.log(JSON.stringify(data, null, 2));
+
     // סנן והצג רק את השדות המבוקשים
     const filteredServices = services.map(service => ({
       id: service.id,
