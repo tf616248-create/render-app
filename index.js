@@ -57,8 +57,6 @@ app.get('/', async (req, res) => {
       return res.status(500).json({ error: 'API Key לא מוגדר' });
     }
 
-    console.log('שולח בקשה ל-Render API...');
-    
     const response = await fetch('https://api.render.com/v1/services', {
       method: 'GET',
       headers: {
@@ -68,83 +66,44 @@ app.get('/', async (req, res) => {
     });
 
     if (!response.ok) {
-      throw new Error(`שגיאה: ${response.status}`);
+      throw new Error(`שגיאה ב-Render API: ${response.status}`);
     }
 
     const data = await response.json();
     
-    // הדפס את הנתונים המלאים ללוג
-    console.log('נתונים מלאים מ-Render:', JSON.stringify(data, null, 2));
-    
-    // בדוק אם data הוא מערך או אובייקט
+    // בדוק אם data הוא מערך או אובייקט עם שדה services
     const services = Array.isArray(data) ? data : (data.services || []);
     
-    console.log(`נמצאו ${services.length} שירותים`);
-    
-    // הצג את כל המידע הזמין על כל שירות
-    const detailedServices = services.map(service => {
-      console.log('שירות בודד:', JSON.stringify(service, null, 2));
-      
-      return {
-        מזהה: service.id || 'לא זמין',
-        שם: service.name || 'ללא שם',
-        סוג: service.type || 'לא ידוע',
-        סטטוס: service.suspended === 'suspended' ? 'מושהה' : 'פעיל',
-        יצירה: service.createdAt || 'לא ידוע',
-        עדכון_אחרון: service.updatedAt || 'לא ידוע',
-        branch: service.branch || 'לא ידוע',
-        region: service.region || 'לא ידוע',
-        url: service.serviceDetails?.url || 'אין URL',
-        // נתונים מלאים (לבדיקה)
-        נתונים_מלאים: service
-      };
-    });
+    // סנן והצג רק את השדות המבוקשים
+    const filteredServices = services.map(service => ({
+      id: service.id,
+      name: service.name,
+      type: service.type,
+      runtime: service.serviceDetails?.env || service.env || 'לא זמין',
+      region: service.region,
+      slug: service.slug || service.name,
+      serviceName: service.name,
+      createdAt: service.createdAt,
+      updatedAt: service.updatedAt,
+      serviceState: service.suspended === 'suspended' ? 'suspended' : 
+                    service.suspended === 'not_suspended' ? 'active' : 
+                    service.serviceState || 'active'
+    }));
     
     res.json({
-      סה_כ_שירותים: services.length,
-      שירותים: detailedServices
+      total: filteredServices.length,
+      services: filteredServices
     });
 
   } catch (error) {
-    console.error('שגיאה מפורטת:', error);
+    console.error('שגיאה:', error);
     res.status(500).json({ 
-      error: error.message,
-      stack: error.stack
+      error: error.message
     });
-  }
-});
-
-// נקודת בדיקה נוספת - הצג רק את הנתונים הגולמיים
-app.get('/raw', async (req, res) => {
-  try {
-    const apiKey = process.env.RENDER_API_KEY;
-    
-    if (!apiKey) {
-      return res.status(500).json({ error: 'API Key לא מוגדר' });
-    }
-    
-    const response = await fetch('https://api.render.com/v1/services', {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      }
-    });
-
-    const data = await response.json();
-    
-    // החזר את הנתונים כמו שהם מ-Render
-    res.json(data);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`השרת רץ על פורט ${PORT}`);
-  console.log('נקודות גישה:');
-  console.log(`  / - פלט מעובד`);
-  console.log(`  /raw - נתונים גולמיים מ-Render`);
+  console.log(`🚀 השרת רץ על פורט ${PORT}`);
 });
 
