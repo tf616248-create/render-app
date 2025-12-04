@@ -42,9 +42,7 @@
 
 // app.listen(PORT, () => {
 //   console.log(`השרת רץ על פורט ${PORT}`);
-// });
-const express = require('express');
-const fetch = require('node-fetch'); // אם Node < 18
+// });const express = require('express');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,6 +54,7 @@ app.get('/', async (req, res) => {
       return res.status(500).json({ error: 'API Key לא מוגדר' });
     }
 
+    // fetch גלובלי מובנה ב-Node >=18
     const response = await fetch('https://api.render.com/v1/services', {
       method: 'GET',
       headers: {
@@ -70,10 +69,9 @@ app.get('/', async (req, res) => {
 
     const data = await response.json();
 
-    // עכשיו data הוא מערך של אובייקטים עם מפתח service
+    // כל service נמצא בתוך item.service
     const filteredServices = data.map(item => {
       const service = item.service;
-
       return {
         id: service.id,
         name: service.name,
@@ -93,7 +91,7 @@ app.get('/', async (req, res) => {
       };
     });
 
-    // הדפסת JSON מסודר לקונסול
+    // הדפסה קריאה לקונסול
     console.log(JSON.stringify(filteredServices, null, 2));
 
     res.json({
